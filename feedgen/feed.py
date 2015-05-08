@@ -223,6 +223,44 @@ class FeedGenerator(object):
 		feed, doc = self._create_atom(extensions=extensions)
 		doc.write(filename, pretty_print=pretty, encoding=encoding)
 
+	def from_rss(self, xml, extensions=True):
+		''' Create a feedgen object from a file
+		'''
+
+		nsmap = dict()
+		if extensions:
+			for ext in self.__extensions.values() or []:
+				if ext.get('rss'):
+					 nsmap.update( ext['inst'].extend_ns() )
+
+		nsmap.update({'atom':  'http://www.w3.org/2005/Atom',
+			'content': 'http://purl.org/rss/1.0/modules/content/'})
+
+		from xml.etree.ElementTree import ElementTree
+		tree = ElementTree()
+		tree.parse("rss.xml")
+
+		self.title(tree.find('./channel/title').text)
+		self.link([{'href':tree.find('./channel/link').text}])
+		self.description(tree.find('./channel/description').text)
+
+		llang = tree.find('./channel/language')
+		if llang != None:
+			self.language(llang.text)
+
+		items = tree.findall("./channel/item")
+		for i in items:
+			entry = self.add_entry()
+			entry.title(i.find("title").text)
+			entry.description(i.find("description").text)
+			entry.link([{'href':i.find("link").text}])
+
+		# rssfeed  = self.rss_str(pretty=True) # Get the RSS feed as string
+		#print rssfeed
+		#items = root.findall("./channel/item")
+
+		return self
+	
 
 	def _create_rss(self, extensions=True):
 		'''Create an RSS feed xml structure containing all previously set fields.
@@ -240,17 +278,20 @@ class FeedGenerator(object):
 
 		feed = etree.Element('rss', version='2.0', nsmap=nsmap )
 		channel = etree.SubElement(feed, 'channel')
+
 		if not ( self.__rss_title and self.__rss_link and self.__rss_description ):
 			missing = ', '.join(([] if self.__rss_title else ['title']) + \
 					([] if self.__rss_link else ['link']) + \
 					([] if self.__rss_description else ['description']))
 			raise ValueError('Required fields not set (%s)' % missing)
+
 		title = etree.SubElement(channel, 'title')
 		title.text = self.__rss_title
 		link = etree.SubElement(channel, 'link')
 		link.text = self.__rss_link
 		desc = etree.SubElement(channel, 'description')
 		desc.text = self.__rss_description
+
 		for ln in  self.__atom_link or []:
 			# It is recommended to include a atom self link in rss documents…
 			if ln.get('rel') == 'self':
