@@ -238,7 +238,7 @@ class FeedGenerator(object):
 
 		from xml.etree.ElementTree import ElementTree
 		tree = ElementTree()
-		tree.parse("rss.xml")
+		tree.parse(xml)
 
 		self.title(tree.find('./channel/title').text)
 		self.link([{'href':tree.find('./channel/link').text}])
